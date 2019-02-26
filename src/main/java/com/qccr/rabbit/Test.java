@@ -1,10 +1,8 @@
 package com.qccr.rabbit;
 
 import com.qccr.rabbit.common.Constant;
-import com.qccr.rabbit.domain.ConsumerInter;
 import com.qccr.rabbit.domain.SenderInter;
 import com.qccr.rabbit.factory.SenderBuilder;
-import com.qccr.rabbit.factory.ThreadPoolConsumerBuilder;
 
 
 public class Test {
@@ -27,13 +25,15 @@ public class Test {
     // 4. 创建队列并绑定exchange
     rabbit.createQueueAndBindExchange(queue, durable, exclusive, autoDelete, rabbit.getConnection(),
         exchange, routingKey);
-    // 3. 创建发送者
-    SenderInter sender = SenderBuilder.buildMessageSender(exchange, routingKey, "", rabbit);
+    // 5. 创建发送者
+    SenderInter sender = SenderBuilder.buildMessageSender("superins.insurance", "#.picc.shanghai.quote", "", rabbit);
     sender.send("我是rabbit");
     // sender.send(new ConsumeFlag(true, "I am rabbit"));
-    // 4. 创建线程池接收者
+    // 6. 创建线程池接收者
     MyProcess mp = new MyProcess();
     rabbit.threadPoolConsume(2, 1, queue, mp);
+    rabbit.threadPoolConsume(2, 1, "superins.insurance.picc.shanghai.quote", new MyProcess1());
+    rabbit.threadPoolConsume(2, 1, "superins.insurance.quote.return", new MyProcess1());
   }
 
 }

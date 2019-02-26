@@ -1,5 +1,6 @@
 package com.qccr.rabbit.factory;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.qccr.rabbit.common.Constant;
 import com.qccr.rabbit.common.SuccessFlag;
 import com.qccr.rabbit.common.ThreadPool;
@@ -9,34 +10,41 @@ import com.qccr.rabbit.handle.MessageProcessInter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.connection.Connection;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 @Slf4j
 public class ThreadPoolConsumerBuilder {
-  private ExecutorService executor;
+//  private ExecutorService executor;
   private volatile boolean stop = false;
   private final ThreadPool threadPool;
-  private static volatile ThreadPoolConsumerBuilder threadPoolConsumerBuilder;
+//  private static volatile ThreadPoolConsumerBuilder threadPoolConsumerBuilder;
 
   private ThreadPoolConsumerBuilder(int threadCount, long interval, String queue,
       Connection connection, MessageProcessInter messageProcess) {
     // 创建固定的线程池,这里可以改变一下
-    this.threadPool = new ThreadPool(threadCount, interval, queue, connection, messageProcess);
-    executor = Executors.newFixedThreadPool(threadPool.getThreadCount());
+    ThreadFactory namedThreadFactory = new ThreadFactoryBuilder()
+            .setNameFormat("demo-pool-%d").build();
+    //Common Thread Pool
+    ExecutorService executor = new ThreadPoolExecutor(threadCount, 200,
+            0L, TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<Runnable>(1024), namedThreadFactory, new ThreadPoolExecutor.AbortPolicy());
+
+//    ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+    this.threadPool = new ThreadPool(threadCount, interval, queue, connection, messageProcess,executor);
   }
 
   // 得到线程池创建实例对象.
   public static ThreadPoolConsumerBuilder getInstance(int threadCount, long interval, String queue,
       Connection connection, MessageProcessInter messageProcess) {
-    if (threadPoolConsumerBuilder == null) {
-      synchronized (ThreadPoolConsumerBuilder.class) {
-        if (threadPoolConsumerBuilder == null) {
-          threadPoolConsumerBuilder = new ThreadPoolConsumerBuilder(threadCount, interval, queue,
-              connection, messageProcess);
-        }
-      }
-    }
+    ThreadPoolConsumerBuilder threadPoolConsumerBuilder = new ThreadPoolConsumerBuilder(threadCount,interval,queue,connection,messageProcess);
+//    if (threadPoolConsumerBuilder == null) {
+//      synchronized (ThreadPoolConsumerBuilder.class) {
+//        if (threadPoolConsumerBuilder == null) {
+//          threadPoolConsumerBuilder = new ThreadPoolConsumerBuilder(threadCount, interval, queue,
+//              connection, messageProcess);
+//        }
+//      }
+//    }
     return threadPoolConsumerBuilder;
   }
 
@@ -49,7 +57,7 @@ public class ThreadPoolConsumerBuilder {
     for (int i = 0; i < threadPool.getThreadCount(); i++) {
       final ConsumerInter messageConsumer = this.consumerBuilder(this.threadPool.getConnection(),
           this.threadPool.getQueue(), this.threadPool.getMessageProcess());
-      executor.execute(new Runnable() {
+      this.threadPool.executor.execute(new Runnable() {
         @Override
         public void run() {
           while (!stop) {

@@ -1,11 +1,12 @@
 package com.qccr.rabbit.common;
 
 import com.qccr.rabbit.handle.MessageProcessInter;
-import org.springframework.amqp.rabbit.connection.Connection;
-
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.amqp.rabbit.connection.Connection;
+
+import java.util.concurrent.ExecutorService;
 
 @Data
 @AllArgsConstructor
@@ -19,5 +20,6 @@ public class ThreadPool {
   String queue;
   Connection connection;
   MessageProcessInter messageProcess;
+  public ExecutorService executor;
 
 }
